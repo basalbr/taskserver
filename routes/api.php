@@ -1,7 +1,9 @@
 <?php
 
+use App\User;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -30,7 +32,7 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 Route::post('login', function (Request $request) {
     $http = new Client;
 
-    $response = $http->post(env('APP_URL').'/oauth/token', [
+    $response = $http->post(env('APP_URL') . '/oauth/token', [
         'form_params' => [
             'grant_type' => 'password',
             'client_id' => 2,
@@ -41,5 +43,39 @@ Route::post('login', function (Request $request) {
         ],
     ]);
 
-    return json_decode((string) $response->getBody(), true);
+    return json_decode((string)$response->getBody(), true);
+});
+
+//pega todos os usuarios
+Route::middleware('auth:api')->get('users', function () {
+    return response()->json(\App\User::all());
+});
+
+//atualiza um funcionario
+Route::middleware('auth:api')->put('users', function (Request $request) {
+    /* @var $user User */
+    $user = User::findOrFail($request->get('id'));
+
+    $user->update($request->all());
+    return response()->json($user);
+});
+
+//pega um usuario atraves de um id
+Route::middleware('auth:api')->get('users/{id}', function ($id) {
+    $user = User::findOrFail($id);
+    return response()->json($user);
+});
+
+//cria novo usuario
+Route::middleware('auth:api')->post('users', function (Request $request) {
+    return response()->json(User::create($request->all()));
+});
+
+//deleta usuario
+Route::middleware('auth:api')->delete('users/{id}', function ($id) {
+    if (Auth::user()->id === $id) {
+        return response()->json(['error' => "can't delete yourself"])->setStatusCode(404);
+    }
+    User::destroy($id);
+    return response()->json(['message'=>'ok']);
 });
